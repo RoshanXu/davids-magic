@@ -135,8 +135,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <script type="module">
-import { FFmpeg } from 'https://registry.npmmirror.com/@ffmpeg/ffmpeg/0.12.10/files/dist/esm/index.min.js';
-import { toBlobURL } from 'https://registry.npmmirror.com/@ffmpeg/util/0.12.1/files/dist/esm/index.min.js';
+import { FFmpeg } from './ffmpeg/ffmpeg/index.js';
+import { toBlobURL } from './ffmpeg/util/index.js';
 
 // ---- State ----
 let files = [];
@@ -172,7 +172,7 @@ async function initFFmpeg() {
     // console.log(message);
   });
 
-  const baseURL = 'https://registry.npmmirror.com/@ffmpeg/core/0.12.6/files/dist/esm';
+  const baseURL = './ffmpeg/core';
   await ffmpeg.load({
     coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
     wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
