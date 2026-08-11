@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DavidsMagic Web - 音视频剪辑</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1d23; color: #e0e0e0; min-height: 100vh; }
+.header { background: #252830; padding: 16px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #333; }
+.header h1 { font-size: 20px; font-weight: 700; color: #6c5ce7; }
+.container { max-width: 800px; margin: 0 auto; padding: 24px; }
+.upload-zone { border: 2px dashed #444; border-radius: 12px; padding: 48px; text-align: center; cursor: pointer; transition: .2s; margin-bottom: 20px; }
+.upload-zone:hover, .upload-zone.dragover { border-color: #6c5ce7; background: rgba(108,92,231,.08); }
+.upload-zone .icon { font-size: 48px; margin-bottom: 12px; }
+.upload-zone p { color: #888; font-size: 14px; }
+.upload-zone .hint { color: #666; font-size: 12px; margin-top: 8px; }
+.file-list { margin-bottom: 20px; }
+.file-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #252830; border-radius: 8px; margin-bottom: 8px; }
+.file-item .name { flex: 1; font-size: 14px; }
+.file-item .info { font-size: 12px; color: #888; }
+.file-item .remove { color: #e74c3c; cursor: pointer; padding: 4px 8px; border: none; background: none; font-size: 18px; }
+.trim-section { background: #252830; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.trim-section h3 { font-size: 16px; margin-bottom: 16px; color: #6c5ce7; }
+.trim-row { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.trim-row label { font-size: 13px; color: #aaa; min-width: 40px; }
+.trim-row input { background: #1a1d23; border: 1px solid #444; color: #e0e0e0; padding: 8px 12px; border-radius: 6px; font-family: monospace; width: 130px; }
+.format-select { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.format-chip { padding: 8px 16px; border: 1px solid #444; border-radius: 20px; cursor: pointer; font-size: 13px; transition: .2s; background: #252830; }
+.format-chip:hover { border-color: #6c5ce7; }
+.format-chip.selected { background: #6c5ce7; border-color: #6c5ce7; color: #fff; }
+.btn { padding: 12px 32px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: .2s; }
+.btn-primary { background: #6c5ce7; color: #fff; width: 100%; }
+.btn-primary:hover { background: #5a4bd1; }
+.btn-primary:disabled { background: #444; cursor: not-allowed; }
+.progress-wrap { margin-top: 16px; }
+.progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+.progress-bar .fill { height: 100%; background: #6c5ce7; transition: .3s; width: 0; }
+.progress-text { font-size: 12px; color: #888; margin-top: 6px; text-align: center; }
+.status { padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 14px; display: none; }
+.status.error { display: block; background: rgba(231,76,60,.15); color: #e74c3c; }
+.status.success { display: block; background: rgba(46,204,113,.15); color: #2ecc71; }
+.status a { color: #6c5ce7; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span style="font-size:24px;">🎬</span>
+  <h1>DavidsMagic Web</h1>
+  <span style="font-size:12px;color:#666;margin-left:auto;">基于 FFmpeg.wasm</span>
+</div>
+
+<div class="container">
+
+  <!-- 上传区 -->
+  <div class="upload-zone" id="uploadZone">
+    <div class="icon">📁</div>
+    <p>拖放音视频文件到此处，或点击选择</p>
+    <p class="hint">支持 MP4 / MKV / MOV / M4A / MP3 / WAV / FLAC 等格式 · 单文件最大 500MB</p>
+    <input type="file" id="fileInput" multiple hidden
+      accept="video/*,audio/*,.mkv,.mov,.m4a,.aac,.flac,.ogg,.wav,.webm,.avi">
+  </div>
+
+  <!-- 文件列表 -->
+  <div class="file-list" id="fileList"></div>
+
+  <!-- 时间裁剪 -->
+  <div class="trim-section" id="trimSection" style="display:none">
+    <h3>⏱ 时间裁剪</h3>
+    <div class="trim-row">
+      <label>开始:</label>
+      <input type="text" id="trimStart" value="00:00:00.000" placeholder="00:00:00.000">
+      <label>结束:</label>
+      <input type="text" id="trimEnd" value="" placeholder="00:00:00.000">
+      <button class="btn" style="padding:6px 12px;font-size:12px;background:#444;" onclick="resetTrim()">重置</button>
+    </div>
+    <p style="font-size:11px;color:#666;">格式: 时:分:秒.毫秒（如 00:01:30.500）</p>
+  </div>
+
+  <!-- 导出格式 -->
+  <h3 style="font-size:16px;margin-bottom:12px;color:#6c5ce7;">📦 导出格式</h3>
+  <div class="format-select" id="formatSelect">
+    <span class="format-chip selected" data-fmt="mp4">MP4</span>
+    <span class="format-chip" data-fmt="mp3">MP3</span>
+    <span class="format-chip" data-fmt="aac">AAC</span>
+    <span class="format-chip" data-fmt="m4a">M4A</span>
+    <span class="format-chip" data-fmt="wav">WAV</span>
+    <span class="format-chip" data-fmt="flac">FLAC</span>
+    <span class="format-chip" data-fmt="ogg">OGG</span>
+  </div>
+
+  <!-- 质量 -->
+  <h3 style="font-size:16px;margin-bottom:12px;color:#6c5ce7;">🎚 画质</h3>
+  <div class="format-select" id="qualitySelect">
+    <span class="format-chip selected" data-q="original">原画</span>
+    <span class="format-chip" data-q="high">高清 (1080p)</span>
+    <span class="format-chip" data-q="standard">标清 (720p)</span>
+    <span class="format-chip" data-q="small">小文件 (480p)</span>
+  </div>
+
+  <!-- 导出按钮 -->
+  <button class="btn btn-primary" id="exportBtn" disabled>等待 FFmpeg 加载...</button>
+
+  <!-- 进度 -->
+  <div class="progress-wrap" id="progressWrap" style="display:none">
+    <div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText"></div>
+  </div>
+
+  <!-- 状态 -->
+  <div class="status" id="status"></div>
+</div>
+
+<script type="module">
+import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.min.js';
+import { toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.min.js';
+
+// ---- State ----
+let files = [];
+let ffmpeg = null;
+let selectedFormat = 'mp4';
+let selectedQuality = 'original';
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+
+// ---- DOM ----
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const trimSection = document.getElementById('trimSection');
+const trimStart = document.getElementById('trimStart');
+const trimEnd = document.getElementById('trimEnd');
+const exportBtn = document.getElementById('exportBtn');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressText = document.getElementById('progressText');
+const statusEl = document.getElementById('status');
+
+// ---- Init FFmpeg ----
+async function initFFmpeg() {
+  ffmpeg = new FFmpeg();
+
+  ffmpeg.on('progress', ({ progress, time }) => {
+    const pct = Math.round(progress * 100);
+    progressFill.style.width = pct + '%';
+    progressText.textContent = `处理中... ${pct}%  (${time ? (time/1000000).toFixed(1)+'s' : ''})`;
+  });
+
+  ffmpeg.on('log', ({ message }) => {
+    // console.log(message);
+  });
+
+  const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+  await ffmpeg.load({
+    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+  });
+
+  exportBtn.disabled = false;
+  exportBtn.textContent = '开始导出';
+  showStatus('success', 'FFmpeg 加载完成 ✓');
+}
+
+initFFmpeg().catch(e => {
+  exportBtn.textContent = 'FFmpeg 加载失败';
+  showStatus('error', 'FFmpeg.wasm 加载失败，请刷新页面重试。<br>如持续失败，可能是 CDN 被墙，需更换镜像。');
+});
+
+// ---- Upload ----
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => {
+  handleFiles(fileInput.files);
+  fileInput.value = '';
+});
+
+function handleFiles(fileList) {
+  for (const f of fileList) {
+    if (f.size > MAX_FILE_SIZE) {
+      showStatus('error', `文件 "${f.name}" 超过 500MB 限制`);
+      continue;
+    }
+    files.push(f);
+  }
+  renderFiles();
+}
+
+function renderFiles() {
+  if (files.length === 0) {
+    fileList.innerHTML = '';
+    trimSection.style.display = 'none';
+    exportBtn.disabled = ffmpeg ? false : true;
+    return;
+  }
+  trimSection.style.display = 'block';
+  exportBtn.disabled = ffmpeg ? false : true;
+
+  fileList.innerHTML = files.map((f, i) => `
+    <div class="file-item">
+      <span>${f.type.startsWith('video') ? '🎬' : '🎵'}</span>
+      <span class="name">${f.name}</span>
+      <span class="info">${formatSize(f.size)}</span>
+      <button class="remove" onclick="removeFile(${i})">✕</button>
+    </div>
+  `).join('');
+
+  // 更新结束时间为第一个文件时长（如果有的话）
+  if (trimEnd.value === '') {
+    trimEnd.value = '00:00:00.000';
+  }
+}
+
+function removeFile(i) { files.splice(i, 1); renderFiles(); }
+function formatSize(bytes) {
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(0)+'KB';
+  if (bytes < 1024*1024*1024) return (bytes/(1024*1024)).toFixed(1)+'MB';
+  return (bytes/(1024*1024*1024)).toFixed(2)+'GB';
+}
+
+// ---- Trim ----
+function resetTrim() {
+  trimStart.value = '00:00:00.000';
+  trimEnd.value = '00:00:00.000';
+}
+
+function parseTimestamp(text) {
+  const parts = text.trim().split(':');
+  let result = 0;
+  if (parts.length === 3) {
+    result += parseInt(parts[0]) * 3600000;
+    result += parseInt(parts[1]) * 60000;
+    const secParts = parts[2].split('.');
+    result += parseInt(secParts[0]) * 1000;
+    if (secParts.length > 1) result += parseInt(secParts[1].padEnd(3,'0').substring(0,3));
+  } else if (parts.length === 2) {
+    result += parseInt(parts[0]) * 60000;
+    const secParts = parts[1].split('.');
+    result += parseInt(secParts[0]) * 1000;
+    if (secParts.length > 1) result += parseInt(secParts[1].padEnd(3,'0').substring(0,3));
+  } else {
+    const secParts = parts[0].split('.');
+    result += parseInt(secParts[0]) * 1000;
+    if (secParts.length > 1) result += parseInt(secParts[1].padEnd(3,'0').substring(0,3));
+  }
+  return result;
+}
+
+// ---- Format selection ----
+document.getElementById('formatSelect').addEventListener('click', e => {
+  if (!e.target.dataset.fmt) return;
+  document.querySelectorAll('#formatSelect .format-chip').forEach(c => c.classList.remove('selected'));
+  e.target.classList.add('selected');
+  selectedFormat = e.target.dataset.fmt;
+});
+document.getElementById('qualitySelect').addEventListener('click', e => {
+  if (!e.target.dataset.q) return;
+  document.querySelectorAll('#qualitySelect .format-chip').forEach(c => c.classList.remove('selected'));
+  e.target.classList.add('selected');
+  selectedQuality = e.target.dataset.q;
+});
+
+// ---- Export ----
+exportBtn.addEventListener('click', doExport);
+
+async function doExport() {
+  if (!ffmpeg || files.length === 0) return;
+  if (exportBtn.disabled) return;
+
+  const startMs = parseTimestamp(trimStart.value);
+  const endMs = parseTimestamp(trimEnd.value);
+  const doTrim = endMs > startMs;
+
+  exportBtn.disabled = true;
+  exportBtn.textContent = '处理中...';
+  progressWrap.style.display = 'block';
+  progressFill.style.width = '0%';
+  progressText.textContent = '正在写入文件...';
+
+  try {
+    // 将所有文件写入 FFmpeg 虚拟文件系统
+    const inputNames = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const ext = f.name.includes('.') ? f.name.split('.').pop().toLowerCase() : 'tmp';
+      const inputName = `input_${i}.${ext}`;
+      progressText.textContent = `正在加载 ${f.name}...`;
+      const data = new Uint8Array(await f.arrayBuffer());
+      await ffmpeg.writeFile(inputName, data);
+      inputNames.push(inputName);
+    }
+
+    progressText.textContent = '正在转码...';
+
+    const outExt = selectedFormat;
+    const outputName = `output.${outExt}`;
+    const ffargs = [];
+
+    // 视频缩放（根据画质）
+    const qHeights = { original: null, high: 1080, standard: 720, small: 480 };
+    if (selectedQuality !== 'original' && qHeights[selectedQuality] && selectedFormat !== 'mp3' && selectedFormat !== 'aac' && selectedFormat !== 'm4a' && selectedFormat !== 'wav' && selectedFormat !== 'flac' && selectedFormat !== 'ogg') {
+      ffargs.push('-vf', `scale=-2:${qHeights[selectedQuality]}`);
+    }
+
+    // 输入文件
+    for (const name of inputNames) {
+      if (doTrim && inputNames.length === 1) {
+        ffargs.push('-ss', (startMs / 1000).toFixed(3), '-t', ((endMs - startMs) / 1000).toFixed(3));
+      }
+      ffargs.push('-i', name);
+    }
+
+    // 编解码参数
+    const isAudio = ['mp3','aac','m4a','wav','flac','ogg'].includes(selectedFormat);
+    if (selectedFormat === 'mp3') {
+      ffargs.push('-c:a', 'libmp3lame', '-b:a', '192k');
+    } else if (selectedFormat === 'aac' || selectedFormat === 'm4a') {
+      ffargs.push('-c:a', 'aac', '-b:a', '192k');
+    } else if (selectedFormat === 'wav') {
+      ffargs.push('-c:a', 'pcm_s16le');
+    } else if (selectedFormat === 'flac') {
+      ffargs.push('-c:a', 'flac');
+    } else if (selectedFormat === 'ogg') {
+      ffargs.push('-c:a', 'libvorbis', '-b:a', '192k');
+    } else {
+      // mp4 / video
+      ffargs.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-pix_fmt', 'yuv420p');
+      ffargs.push('-c:a', 'aac', '-b:a', '192k');
+    }
+    ffargs.push(outputName);
+
+    await ffmpeg.exec(ffargs);
+
+    // 读取输出
+    progressText.textContent = '正在读取结果...';
+    const data = await ffmpeg.readFile(outputName);
+    const blob = new Blob([data.buffer], { type: getMime(selectedFormat) });
+
+    // 下载
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    let prefix = files[0].name.replace(/\.[^.]+$/, '');
+    a.download = `${prefix}_output.${outExt}`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // 清理
+    for (const name of inputNames) {
+      try { await ffmpeg.deleteFile(name); } catch (_) {}
+    }
+    try { await ffmpeg.deleteFile(outputName); } catch (_) {}
+
+    progressText.textContent = '完成！';
+    showStatus('success', `导出成功！文件已开始下载。`);
+    exportBtn.disabled = false;
+    exportBtn.textContent = '开始导出';
+  } catch (e) {
+    console.error(e);
+    progressText.textContent = '失败';
+    showStatus('error', `导出失败: ${e.message}`);
+    exportBtn.disabled = false;
+    exportBtn.textContent = '重试导出';
+  }
+}
+
+function getMime(fmt) {
+  const map = {
+    mp4: 'video/mp4', mp3: 'audio/mpeg', aac: 'audio/aac', m4a: 'audio/mp4',
+    wav: 'audio/wav', flac: 'audio/flac', ogg: 'audio/ogg', webm: 'video/webm'
+  };
+  return map[fmt] || 'application/octet-stream';
+}
+
+function showStatus(type, msg) {
+  statusEl.className = 'status ' + type;
+  statusEl.innerHTML = msg;
+  statusEl.style.display = 'block';
+  setTimeout(() => { statusEl.style.display = 'none'; }, 8000);
+}
+
+// Global functions for onclick handlers
+window.removeFile = removeFile;
+window.resetTrim = resetTrim;
+</script>
+</body>
+</html>
