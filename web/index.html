@@ -16,7 +16,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .upload-zone p { color: #888; font-size: 14px; }
 .upload-zone .hint { color: #666; font-size: 12px; margin-top: 8px; }
 .file-list { margin-bottom: 20px; }
-.file-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #252830; border-radius: 8px; margin-bottom: 8px; }
+.file-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #252830; border-radius: 8px; margin-bottom: 8px; border: 2px solid transparent; transition: .15s; }
+.file-item.selected { border-color: #6c5ce7; background: rgba(108,92,231,.1); }
 .file-item .name { flex: 1; font-size: 14px; }
 .file-item .info { font-size: 12px; color: #888; }
 .file-item .remove { color: #e74c3c; cursor: pointer; padding: 4px 8px; border: none; background: none; font-size: 18px; }
@@ -41,6 +42,40 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .status.error { display: block; background: rgba(231,76,60,.15); color: #e74c3c; }
 .status.success { display: block; background: rgba(46,204,113,.15); color: #2ecc71; }
 .status a { color: #6c5ce7; }
+
+/* ---- 预览面板 ---- */
+.preview-panel { background: #252830; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
+.preview-panel.show { display: block; }
+.preview-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.preview-header .title { flex: 1; font-size: 14px; font-weight: 600; color: #6c5ce7; }
+.preview-header .close { color: #888; cursor: pointer; background: none; border: none; font-size: 20px; padding: 2px 6px; }
+.preview-media { width: 100%; border-radius: 8px; background: #000; display: block; max-height: 360px; }
+.preview-audio { display: none; padding: 32px 16px; text-align: center; background: #1a1d23; border-radius: 8px; }
+.preview-audio .audio-icon { font-size: 64px; display: block; margin-bottom: 8px; }
+.preview-audio .audio-name { font-size: 13px; color: #aaa; word-break: break-all; }
+.preview-controls { margin-top: 12px; }
+.preview-seek { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.preview-seek span { font-size: 11px; font-family: monospace; color: #aaa; min-width: 42px; }
+.preview-seek span.time-cur { text-align: right; }
+.preview-seek input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 6px; background: #444; border-radius: 3px; outline: none; }
+.preview-seek input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #6c5ce7; cursor: pointer; }
+.preview-btns { display: flex; justify-content: center; align-items: center; gap: 12px; }
+.preview-btns button { background: #333; border: none; color: #e0e0e0; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s; }
+.preview-btns button:hover { background: #444; }
+.preview-btns .btn-play { background: #6c5ce7; color: #fff; width: 48px; height: 48px; font-size: 22px; }
+.preview-btns .btn-play:hover { background: #5a4bd1; }
+.trim-btns { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.trim-btns button { background: #333; border: 1px solid #555; color: #ccc; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: .15s; }
+.trim-btns button:hover { background: #444; border-color: #6c5ce7; color: #fff; }
+
+@media (max-width: 600px) {
+  .preview-panel { padding: 12px; }
+  .preview-media { max-height: 220px; }
+  .preview-btns button { width: 36px; height: 36px; font-size: 16px; }
+  .preview-btns .btn-play { width: 44px; height: 44px; font-size: 20px; }
+  .preview-audio { padding: 24px 12px; }
+  .preview-audio .audio-icon { font-size: 48px; }
+}
 
 /* ---- 响应式：手机端适配 ---- */
 @media (max-width: 600px) {
@@ -87,6 +122,37 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <!-- 文件列表 -->
   <div class="file-list" id="fileList"></div>
 
+  <!-- 预览面板 -->
+  <div class="preview-panel" id="previewPanel">
+    <div class="preview-header">
+      <span>👁</span>
+      <span class="title" id="previewTitle">预览</span>
+      <button class="close" onclick="closePreview()">✕</button>
+    </div>
+    <video class="preview-media" id="previewVideo" controlsList="nodownload" style="display:none"></video>
+    <div class="preview-audio" id="previewAudioBox">
+      <span class="audio-icon" id="previewAudioIcon">🎵</span>
+      <span class="audio-name" id="previewAudioName"></span>
+    </div>
+    <audio id="previewAudio" style="display:none"></audio>
+    <div class="preview-controls">
+      <div class="preview-seek">
+        <span class="time-cur" id="timeCur">00:00</span>
+        <input type="range" id="seekBar" min="0" max="1000" value="0" step="1">
+        <span id="timeTotal">00:00</span>
+      </div>
+      <div class="preview-btns">
+        <button onclick="seekPreview(-5)" title="后退5秒">⏪</button>
+        <button class="btn-play" id="btnPlay" onclick="togglePlay()">▶</button>
+        <button onclick="seekPreview(5)" title="快进5秒">⏩</button>
+      </div>
+      <div class="trim-btns">
+        <button onclick="setTrimTime('start')">📥 设为开始</button>
+        <button onclick="setTrimTime('end')">📤 设为结束</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 时间裁剪 -->
   <div class="trim-section" id="trimSection" style="display:none">
     <h3>⏱ 时间裁剪</h3>
@@ -130,6 +196,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="progress-text" id="progressText"></div>
   </div>
 
+
   <!-- 状态 -->
   <div class="status" id="status"></div>
 </div>
@@ -143,6 +210,9 @@ let files = [];
 let ffmpeg = null;
 let selectedFormat = 'mp4';
 let selectedQuality = 'original';
+let selectedFileIndex = -1;
+let mediaUrl = null;
+let mediaType = ''; // 'video' | 'audio'
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 // ---- DOM ----
@@ -157,6 +227,18 @@ const progressWrap = document.getElementById('progressWrap');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const statusEl = document.getElementById('status');
+const previewPanel = document.getElementById('previewPanel');
+const previewTitle = document.getElementById('previewTitle');
+const previewVideo = document.getElementById('previewVideo');
+const previewAudio = document.getElementById('previewAudio');
+const previewAudioBox = document.getElementById('previewAudioBox');
+const previewAudioIcon = document.getElementById('previewAudioIcon');
+const previewAudioName = document.getElementById('previewAudioName');
+const seekBar = document.getElementById('seekBar');
+const timeCur = document.getElementById('timeCur');
+const timeTotal = document.getElementById('timeTotal');
+const btnPlay = document.getElementById('btnPlay');
+let seekDragging = false;
 
 // ---- Init FFmpeg ----
 async function initFFmpeg() {
@@ -210,7 +292,13 @@ function handleFiles(fileList) {
     }
     files.push(f);
   }
+  if (files.length > 0) {
+    selectedFileIndex = files.length - 1;
+  }
   renderFiles();
+  if (selectedFileIndex >= 0) {
+    previewFile(selectedFileIndex);
+  }
 }
 
 function renderFiles() {
@@ -218,27 +306,192 @@ function renderFiles() {
     fileList.innerHTML = '';
     trimSection.style.display = 'none';
     exportBtn.disabled = ffmpeg ? false : true;
+    closePreview();
     return;
   }
   trimSection.style.display = 'block';
   exportBtn.disabled = ffmpeg ? false : true;
 
   fileList.innerHTML = files.map((f, i) => `
-    <div class="file-item">
+    <div class="file-item${i === selectedFileIndex ? ' selected' : ''}" onclick="selectFile(${i})" style="cursor:pointer;">
       <span>${f.type.startsWith('video') ? '🎬' : '🎵'}</span>
       <span class="name">${f.name}</span>
       <span class="info">${formatSize(f.size)}</span>
-      <button class="remove" onclick="removeFile(${i})">✕</button>
+      <button class="remove" onclick="event.stopPropagation();removeFile(${i})">✕</button>
     </div>
   `).join('');
 
-  // 更新结束时间为第一个文件时长（如果有的话）
   if (trimEnd.value === '') {
     trimEnd.value = '00:00:00.000';
   }
 }
 
-function removeFile(i) { files.splice(i, 1); renderFiles(); }
+function removeFile(i) {
+  if (selectedFileIndex === i) { closePreview(); }
+  else if (selectedFileIndex > i) { selectedFileIndex--; }
+  files.splice(i, 1);
+  renderFiles();
+}
+
+// ---- Preview ----
+function formatTime(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return '00:00.000';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor(seconds * 1000 % 1000);
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + '.' + String(ms).padStart(3,'0');
+}
+
+function formatTimeHMS(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return '00:00:00.000';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor(seconds * 1000 % 1000);
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + '.' + String(ms).padStart(3,'0');
+}
+
+function getActiveMedia() {
+  return mediaType === 'video' ? previewVideo : previewAudio;
+}
+
+function selectFile(index) {
+  if (selectedFileIndex === index) { closePreview(); return; }
+  selectedFileIndex = index;
+  previewFile(index);
+  renderFiles();
+}
+
+function previewFile(index) {
+  const f = files[index];
+  if (!f) return;
+  mediaType = f.type.startsWith('video') ? 'video' : 'audio';
+  previewPanel.classList.add('show');
+  previewTitle.textContent = '预览: ' + f.name;
+
+  // 释放旧资源
+  if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+  mediaUrl = URL.createObjectURL(f);
+
+  // 重置
+  previewVideo.style.display = 'none';
+  previewVideo.pause();
+  previewAudio.pause();
+  previewAudioBox.style.display = 'none';
+
+  if (mediaType === 'video') {
+    previewVideo.style.display = 'block';
+    previewVideo.src = mediaUrl;
+    previewVideo.load();
+  } else {
+    previewAudioBox.style.display = 'block';
+    previewAudioIcon.textContent = '🎵';
+    previewAudioName.textContent = f.name;
+    previewAudio.src = mediaUrl;
+    previewAudio.load();
+  }
+
+  seekBar.value = 0;
+  timeCur.textContent = '00:00';
+  timeTotal.textContent = '00:00';
+  btnPlay.textContent = '▶';
+}
+
+function closePreview() {
+  const media = getActiveMedia();
+  if (media) media.pause();
+  previewPanel.classList.remove('show');
+  if (mediaUrl) { URL.revokeObjectURL(mediaUrl); mediaUrl = null; }
+  mediaType = '';
+  selectedFileIndex = -1;
+  renderFiles();
+}
+
+function togglePlay() {
+  const media = getActiveMedia();
+  if (!media || !media.src || media.src === window.location.href) return;
+  if (media.paused) {
+    media.play().catch(() => {});
+  } else {
+    media.pause();
+  }
+}
+
+function seekPreview(secs) {
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  media.currentTime = Math.max(0, Math.min(media.duration, media.currentTime + secs));
+}
+
+function setTrimTime(target) {
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  const ts = formatTimeHMS(media.currentTime);
+  if (target === 'start') {
+    trimStart.value = ts;
+    showStatus('success', `开始时间已设为 ${ts}`);
+  } else {
+    trimEnd.value = ts;
+    showStatus('success', `结束时间已设为 ${ts}`);
+  }
+}
+
+// 进度条拖动
+seekBar.addEventListener('input', () => {
+  seekDragging = true;
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  timeCur.textContent = formatTime((seekBar.value / 1000) * media.duration);
+});
+seekBar.addEventListener('change', () => {
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  media.currentTime = (seekBar.value / 1000) * media.duration;
+  seekDragging = false;
+});
+
+// 视频元数据加载完成
+previewVideo.addEventListener('loadedmetadata', () => {
+  timeTotal.textContent = formatTime(previewVideo.duration);
+  seekBar.value = 0;
+  timeCur.textContent = '00:00';
+});
+previewVideo.addEventListener('timeupdate', () => {
+  if (!seekDragging && previewVideo.duration) {
+    seekBar.value = Math.round((previewVideo.currentTime / previewVideo.duration) * 1000);
+    timeCur.textContent = formatTime(previewVideo.currentTime);
+  }
+  if (previewVideo.paused && btnPlay.textContent !== '▶') { btnPlay.textContent = '▶'; }
+  else if (!previewVideo.paused && btnPlay.textContent !== '⏸') { btnPlay.textContent = '⏸'; }
+});
+previewVideo.addEventListener('play', () => { btnPlay.textContent = '⏸'; });
+previewVideo.addEventListener('pause', () => { btnPlay.textContent = '▶'; });
+previewVideo.addEventListener('ended', () => { btnPlay.textContent = '▶'; });
+
+// 音频元数据
+previewAudio.addEventListener('loadedmetadata', () => {
+  timeTotal.textContent = formatTime(previewAudio.duration);
+  seekBar.value = 0;
+  timeCur.textContent = '00:00';
+});
+previewAudio.addEventListener('timeupdate', () => {
+  if (!seekDragging && previewAudio.duration) {
+    seekBar.value = Math.round((previewAudio.currentTime / previewAudio.duration) * 1000);
+    timeCur.textContent = formatTime(previewAudio.currentTime);
+  }
+});
+previewAudio.addEventListener('play', () => {
+  btnPlay.textContent = '⏸';
+  previewAudioIcon.textContent = '🔊';
+});
+previewAudio.addEventListener('pause', () => {
+  btnPlay.textContent = '▶';
+  previewAudioIcon.textContent = '🎵';
+});
+previewAudio.addEventListener('ended', () => {
+  btnPlay.textContent = '▶';
+  previewAudioIcon.textContent = '🎵';
+});
 function formatSize(bytes) {
   if (bytes < 1024*1024) return (bytes/1024).toFixed(0)+'KB';
   if (bytes < 1024*1024*1024) return (bytes/(1024*1024)).toFixed(1)+'MB';
@@ -364,13 +617,9 @@ async function doExport() {
     const blob = new Blob([data.buffer], { type: getMime(selectedFormat) });
 
     // 下载
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
     let prefix = files[0].name.replace(/\.[^.]+$/, '');
-    a.download = `${prefix}_output.${outExt}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `${prefix}_output.${outExt}`;
+    await triggerDownload(blob, fileName);
 
     // 清理
     for (const name of inputNames) {
@@ -391,6 +640,28 @@ async function doExport() {
   }
 }
 
+async function triggerDownload(blob, fileName) {
+  // 优先使用 Web Share API（移动端可直接保存到文件）
+  if (navigator.share && navigator.canShare) {
+    const file = new File([blob], fileName, { type: blob.type });
+    if (navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'DavidsMagic 导出' });
+        return;
+      } catch (_) {
+        // 用户取消分享，回退到普通下载
+      }
+    }
+  }
+  // 桌面浏览器 / 不支持的设备：走传统下载
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function getMime(fmt) {
   const map = {
     mp4: 'video/mp4', mp3: 'audio/mpeg', aac: 'audio/aac', m4a: 'audio/mp4',
@@ -409,6 +680,11 @@ function showStatus(type, msg) {
 // Global functions for onclick handlers
 window.removeFile = removeFile;
 window.resetTrim = resetTrim;
+window.selectFile = selectFile;
+window.closePreview = closePreview;
+window.togglePlay = togglePlay;
+window.seekPreview = seekPreview;
+window.setTrimTime = setTrimTime;
 </script>
 </body>
 </html>
