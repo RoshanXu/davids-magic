@@ -43,6 +43,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .status.success { display: block; background: rgba(46,204,113,.15); color: #2ecc71; }
 .status a { color: #6c5ce7; }
 
+/* ---- 微信引导遮罩 ---- */
+.guide-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 999; display: none; align-items: center; justify-content: center; padding: 24px; }
+.guide-overlay.show { display: flex; }
+.guide-card { background: #252830; border-radius: 12px; padding: 24px; max-width: 360px; width: 100%; text-align: center; }
+.guide-card h3 { color: #6c5ce7; font-size: 18px; margin-bottom: 12px; }
+.guide-card p { font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 10px; }
+.guide-card .steps { text-align: left; background: #1a1d23; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #aaa; margin-bottom: 16px; }
+.guide-card .steps b { color: #e0e0e0; }
+.guide-card .btn { width: 100%; }
+.guide-card .tip { font-size: 12px; color: #666; margin-top: 10px; }
+
 /* ---- 预览面板 ---- */
 .preview-panel { background: #252830; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
 .preview-panel.show { display: block; }
@@ -178,13 +189,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <span class="format-chip" data-fmt="ogg">OGG</span>
   </div>
 
-  <!-- 质量 -->
-  <h3 style="font-size:16px;margin-bottom:12px;color:#6c5ce7;">🎚 画质</h3>
-  <div class="format-select" id="qualitySelect">
-    <span class="format-chip selected" data-q="original">原画</span>
-    <span class="format-chip" data-q="high">高清 (1080p)</span>
-    <span class="format-chip" data-q="standard">标清 (720p)</span>
-    <span class="format-chip" data-q="small">小文件 (480p)</span>
+  <!-- 画质（默认隐藏，仅当导入多个不同分辨率的视频时显示） -->
+  <div id="qualitySection" style="display:none">
+    <h3 style="font-size:16px;margin-bottom:12px;color:#6c5ce7;">🎚 画质</h3>
+    <div class="format-select" id="qualitySelect"></div>
   </div>
 
   <!-- 导出按钮 -->
@@ -201,6 +209,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <div class="status" id="status"></div>
 </div>
 
+<!-- 微信引导遮罩 -->
+<div class="guide-overlay" id="guideOverlay">
+  <div class="guide-card">
+    <h3>📲 请用浏览器打开保存</h3>
+    <p>微信内置浏览器无法直接保存文件，请按下面步骤操作：</p>
+    <div class="steps">
+      1. 点击右上角 <b>···</b><br>
+      2. 选择 <b>在浏览器中打开</b><br>
+      3. 在浏览器中重新点击「开始导出」即可保存
+    </div>
+    <button class="btn btn-primary" onclick="closeGuide()">我知道了</button>
+    <div class="tip">文件已处理完成，但微信中不会下载。</div>
+  </div>
+</div>
+
 <script type="module">
 import { FFmpeg } from './ffmpeg/ffmpeg/index.js';
 import { toBlobURL } from './ffmpeg/util/index.js';
@@ -209,10 +232,11 @@ import { toBlobURL } from './ffmpeg/util/index.js';
 let files = [];
 let ffmpeg = null;
 let selectedFormat = 'mp4';
-let selectedQuality = 'original';
+let selectedQuality = undefined; // undefined=未选择, null=原画(不缩放), number=统一目标高度
 let selectedFileIndex = -1;
 let mediaUrl = null;
 let mediaType = ''; // 'video' | 'audio'
+const fileResolutions = new Map(); // File -> {w, h}
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 // ---- DOM ----
@@ -291,6 +315,12 @@ function handleFiles(fileList) {
       continue;
     }
     files.push(f);
+    if (f.type.startsWith('video')) {
+      probeVideoResolution(f).then(r => {
+        fileResolutions.set(f, r);
+        updateQualitySection();
+      });
+    }
   }
   if (files.length > 0) {
     selectedFileIndex = files.length - 1;
@@ -299,6 +329,7 @@ function handleFiles(fileList) {
   if (selectedFileIndex >= 0) {
     previewFile(selectedFileIndex);
   }
+  updateQualitySection();
 }
 
 function renderFiles() {
@@ -327,10 +358,13 @@ function renderFiles() {
 }
 
 function removeFile(i) {
+  const f = files[i];
+  if (f) fileResolutions.delete(f);
   if (selectedFileIndex === i) { closePreview(); }
   else if (selectedFileIndex > i) { selectedFileIndex--; }
   files.splice(i, 1);
   renderFiles();
+  updateQualitySection();
 }
 
 // ---- Preview ----
@@ -534,14 +568,124 @@ document.getElementById('formatSelect').addEventListener('click', e => {
   selectedFormat = e.target.dataset.fmt;
 });
 document.getElementById('qualitySelect').addEventListener('click', e => {
-  if (!e.target.dataset.q) return;
+  const q = e.target.dataset.q;
+  if (!q) return;
   document.querySelectorAll('#qualitySelect .format-chip').forEach(c => c.classList.remove('selected'));
   e.target.classList.add('selected');
-  selectedQuality = e.target.dataset.q;
+  selectedQuality = q === 'original' ? null : Number(q);
 });
+
+// 探测单个视频文件的分辨率（宽高）。无法解码时返回 null。
+function probeVideoResolution(file) {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('video')) { resolve(null); return; }
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    v.playsInline = true;
+    let settled = false;
+    const finish = (r) => {
+      if (settled) return;
+      settled = true;
+      v.removeAttribute('src');
+      v.load();
+      URL.revokeObjectURL(url);
+      resolve(r);
+    };
+    v.onloadedmetadata = () => finish(v.videoWidth && v.videoHeight ? { w: v.videoWidth, h: v.videoHeight } : null);
+    v.onerror = () => finish(null);
+    v.src = url;
+    setTimeout(() => finish(null), 8000);
+  });
+}
+
+// 画质栏：仅当导入「多个不同分辨率的视频」时才显示，默认选中最高分辨率，
+// 并提供「原画」选项（各素材保持自身分辨率/比例导出）。
+// 其余情况（单个视频 / 多个同分辨率视频 / 音频）隐藏，按素材自身规格导出。
+function updateQualitySection() {
+  const qSection = document.getElementById('qualitySection');
+  const qSelect = document.getElementById('qualitySelect');
+
+  const heights = [];
+  for (const f of files) {
+    if (f.type.startsWith('video')) {
+      const r = fileResolutions.get(f);
+      if (r && r.h > 0) heights.push(r.h);
+    }
+  }
+  const distinct = [...new Set(heights)].sort((a, b) => b - a);
+
+  if (distinct.length < 2) {
+    qSection.style.display = 'none';
+    selectedQuality = undefined;
+    return;
+  }
+
+  // 未选择 / 已选高度失效 → 默认最高分辨率；用户显式选择「原画」(null) 时保留
+  if (selectedQuality === undefined || (typeof selectedQuality === 'number' && !distinct.includes(selectedQuality))) {
+    selectedQuality = distinct[0];
+  }
+
+  qSelect.innerHTML = [
+    `<span class="format-chip${selectedQuality === null ? ' selected' : ''}" data-q="original">原画</span>`,
+    ...distinct.map(h => `<span class="format-chip${h === selectedQuality ? ' selected' : ''}" data-q="${h}">${h}p</span>`)
+  ].join('');
+  qSection.style.display = 'block';
+}
 
 // ---- Export ----
 exportBtn.addEventListener('click', doExport);
+
+// 计算拼接统一画布：默认取分辨率最高的视频；用户选了具体高度则按最高视频宽高比推导宽度
+function computeMergeCanvas() {
+  let best = { w: 1280, h: 720 };
+  for (const f of files) {
+    if (!f.type.startsWith('video')) continue;
+    const r = fileResolutions.get(f);
+    if (r && r.w * r.h > best.w * best.h) best = r;
+  }
+  let w, h;
+  if (typeof selectedQuality === 'number') {
+    h = selectedQuality;
+    w = Math.round(h * (best.w / best.h));
+  } else {
+    w = best.w; h = best.h;
+  }
+  if (w % 2 !== 0) w += 1;
+  if (h % 2 !== 0) h += 1;
+  return { w, h };
+}
+
+// 视频拼接：逐段统一分辨率/比例/帧率/像素格式后 concat
+function buildVideoConcat(ffargs) {
+  const { w, h } = computeMergeCanvas();
+  const n = files.length;
+  const parts = [];
+  const inputs = [];
+  for (let i = 0; i < n; i++) {
+    parts.push(`[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[v${i}]`);
+    parts.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a${i}]`);
+    inputs.push(`[v${i}]`, `[a${i}]`);
+  }
+  parts.push(`${inputs.join('')}concat=n=${n}:v=1:a=1[v][a]`);
+  ffargs.push('-filter_complex', parts.join(';'));
+  ffargs.push('-map', '[v]', '-map', '[a]');
+}
+
+// 音频拼接：统一采样率/声道/采样格式后 concat
+function buildAudioConcat(ffargs) {
+  const n = files.length;
+  const parts = [];
+  const labels = [];
+  for (let i = 0; i < n; i++) {
+    parts.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a${i}]`);
+    labels.push(`[a${i}]`);
+  }
+  parts.push(`${labels.join('')}concat=n=${n}:v=0:a=1[a]`);
+  ffargs.push('-filter_complex', parts.join(';'));
+  ffargs.push('-map', '[a]');
+}
 
 async function doExport() {
   if (!ffmpeg || files.length === 0) return;
@@ -575,12 +719,7 @@ async function doExport() {
     const outExt = selectedFormat;
     const outputName = `output.${outExt}`;
     const ffargs = [];
-
-    // 视频缩放（根据画质）
-    const qHeights = { original: null, high: 1080, standard: 720, small: 480 };
-    if (selectedQuality !== 'original' && qHeights[selectedQuality] && selectedFormat !== 'mp3' && selectedFormat !== 'aac' && selectedFormat !== 'm4a' && selectedFormat !== 'wav' && selectedFormat !== 'flac' && selectedFormat !== 'ogg') {
-      ffargs.push('-vf', `scale=-2:${qHeights[selectedQuality]}`);
-    }
+    const isAudioOut = ['mp3','aac','m4a','wav','flac','ogg'].includes(selectedFormat);
 
     // 输入文件
     for (const name of inputNames) {
@@ -590,8 +729,26 @@ async function doExport() {
       ffargs.push('-i', name);
     }
 
+    // 多文件：拼接合并；单文件：可选缩放（画质栏隐藏时通常为原画）
+    if (inputNames.length > 1) {
+      const videoCount = files.filter(f => f.type.startsWith('video')).length;
+      const audioCount = files.length - videoCount;
+      if (videoCount === 0) {
+        buildAudioConcat(ffargs);
+      } else if (audioCount === 0 && !isAudioOut) {
+        buildVideoConcat(ffargs);
+      } else if (audioCount === 0 && isAudioOut) {
+        buildAudioConcat(ffargs);
+      } else if (isAudioOut) {
+        buildAudioConcat(ffargs);
+      } else {
+        throw new Error('音视频混合拼接暂不支持，请分别导出');
+      }
+    } else if (typeof selectedQuality === 'number' && !isAudioOut) {
+      ffargs.push('-vf', `scale=-2:${selectedQuality}`);
+    }
+
     // 编解码参数
-    const isAudio = ['mp3','aac','m4a','wav','flac','ogg'].includes(selectedFormat);
     if (selectedFormat === 'mp3') {
       ffargs.push('-c:a', 'libmp3lame', '-b:a', '192k');
     } else if (selectedFormat === 'aac' || selectedFormat === 'm4a') {
@@ -619,7 +776,7 @@ async function doExport() {
     // 下载
     let prefix = files[0].name.replace(/\.[^.]+$/, '');
     const fileName = `${prefix}_output.${outExt}`;
-    await triggerDownload(blob, fileName);
+    const saved = await triggerDownload(blob, fileName);
 
     // 清理
     for (const name of inputNames) {
@@ -628,7 +785,7 @@ async function doExport() {
     try { await ffmpeg.deleteFile(outputName); } catch (_) {}
 
     progressText.textContent = '完成！';
-    showStatus('success', `导出成功！文件已开始下载。`);
+    showStatus('success', saved ? '导出成功！文件已开始保存。' : '导出完成！请按弹窗提示保存文件。');
     exportBtn.disabled = false;
     exportBtn.textContent = '开始导出';
   } catch (e) {
@@ -640,26 +797,52 @@ async function doExport() {
   }
 }
 
+function isWeChat() {
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+function showOpenInBrowserGuide() {
+  document.getElementById('guideOverlay').classList.add('show');
+}
+
+function closeGuide() {
+  document.getElementById('guideOverlay').classList.remove('show');
+}
+
 async function triggerDownload(blob, fileName) {
-  // 优先使用 Web Share API（移动端可直接保存到文件）
+  // 1) Web Share API：iOS Safari / 部分安卓浏览器可直接调起“保存到文件 / 分享”
   if (navigator.share && navigator.canShare) {
     const file = new File([blob], fileName, { type: blob.type });
-    if (navigator.canShare({ files: [file] })) {
-      try {
+    try {
+      if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: 'DavidsMagic 导出' });
-        return;
-      } catch (_) {
-        // 用户取消分享，回退到普通下载
+        return true;
       }
+    } catch (err) {
+      // 用户取消分享
+      if (err && err.name === 'AbortError') return false;
+      // 其它错误继续尝试下载
     }
   }
-  // 桌面浏览器 / 不支持的设备：走传统下载
+
+  // 2) 微信内置浏览器：不支持下载/保存文件，引导用户在系统浏览器打开
+  if (isWeChat()) {
+    showOpenInBrowserGuide();
+    return false;
+  }
+
+  // 3) 桌面 / 普通移动浏览器：传统 <a download>
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // 延迟释放，避免过早 revoke 导致下载被中断
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return true;
 }
 
 function getMime(fmt) {
@@ -685,6 +868,7 @@ window.closePreview = closePreview;
 window.togglePlay = togglePlay;
 window.seekPreview = seekPreview;
 window.setTrimTime = setTrimTime;
+window.closeGuide = closeGuide;
 </script>
 </body>
 </html>
