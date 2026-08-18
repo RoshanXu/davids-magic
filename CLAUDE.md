@@ -73,7 +73,7 @@ flutter build apk
 
 ## 关键技术细节 & 踩坑
 
-1. **FFmpeg.wasm 依赖 SharedArrayBuffer**，必须带 `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp` 头（`docker/nginx.conf` 已配）。换静态托管时要自己加，否则 wasm 加载失败。
+1. **当前用单线程 FFmpeg.wasm core（`@ffmpeg/core@0.12.6`），不需要 SharedArrayBuffer，也不需要 COOP/COEP 头**；反之给主文档加 `Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp` 会进入 cross-origin isolation，反而破坏 blob URL 加载导致「FFmpeg 加载失败」。若未来换多线程 core（`@ffmpeg/core-mt`）才需要这些头。
 2. **微信内置浏览器无法保存文件**（iOS WKWebView 不认 `<a download>`，安卓 X5 屏蔽 blob 下载；Web Share API 也不可用）。纯前端无解，只能引导「右上角···→在浏览器打开」。想原生保存需接微信 JS-SDK（要后端签名 + 公众号 + JS 安全域名），目前未做。
 3. **nginx 对 html 配了 `expires 7d`**，更新后浏览器可能缓存旧版，需强刷或改成 `no-cache`。
 4. 导出拼接受限：视频拼接假定每段都有音轨；帧率统一 30；横竖屏/不同比例混合会自动黑边补齐；音视频混合 + 视频输出会报错（需分别导出）。

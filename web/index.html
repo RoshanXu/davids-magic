@@ -41,6 +41,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .status { padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 14px; display: none; }
 .status.error { display: block; background: rgba(231,76,60,.15); color: #e74c3c; }
 .status.success { display: block; background: rgba(46,204,113,.15); color: #2ecc71; }
+.status.info { display: block; background: rgba(108,92,231,.15); color: #b0a7f0; }
 .status a { color: #6c5ce7; }
 
 /* ---- 微信引导遮罩 ---- */
@@ -109,6 +110,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   .btn-primary { padding: 14px; font-size: 16px; }
   .status { font-size: 13px; }
 }
+
+/* ---- 底部备案信息 ---- */
+.footer { text-align: center; padding: 24px 12px; border-top: 1px solid #333; }
+.footer a { color: #888; font-size: 12px; text-decoration: none; }
+.footer a:hover { color: #6c5ce7; }
 </style>
 </head>
 <body>
@@ -268,6 +274,8 @@ let seekDragging = false;
 async function initFFmpeg() {
   ffmpeg = new FFmpeg();
 
+  showStatus('info', '正在加载 FFmpeg 核心（约 32MB），请耐心等待...');
+
   ffmpeg.on('progress', ({ progress, time }) => {
     const pct = Math.round(progress * 100);
     progressFill.style.width = pct + '%';
@@ -290,8 +298,9 @@ async function initFFmpeg() {
 }
 
 initFFmpeg().catch(e => {
+  console.error('FFmpeg 加载失败:', e);
   exportBtn.textContent = 'FFmpeg 加载失败';
-  showStatus('error', 'FFmpeg.wasm 加载失败，请刷新页面重试。<br>如持续失败，可能是 CDN 被墙，需更换镜像。');
+  showStatus('error', `FFmpeg 加载失败：${e.message || e}。请刷新页面重试。`);
 });
 
 // ---- Upload ----
@@ -870,5 +879,9 @@ window.seekPreview = seekPreview;
 window.setTrimTime = setTrimTime;
 window.closeGuide = closeGuide;
 </script>
+
+<footer class="footer">
+  <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">苏ICP备2021016894号</a>
+</footer>
 </body>
 </html>
