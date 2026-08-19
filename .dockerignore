@@ -1,0 +1,28 @@
+# Git
+.git/
+.gitignore
+
+# Flutter/Dart
+.dart_tool/
+build/
+android/
+linux/
+windows/
+.idea/
+
+# Archives (不需要打包进镜像)
+*.zip
+
+# Docs
+PRD.md
+构思.md
+README.md
+LICENSE
+
+# Tests
+test/
+
+# Docker files
+docker-compose.yml
+Dockerfile
+.dockerignore

@@ -16,7 +16,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .upload-zone p { color: #888; font-size: 14px; }
 .upload-zone .hint { color: #666; font-size: 12px; margin-top: 8px; }
 .file-list { margin-bottom: 20px; }
-.file-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #252830; border-radius: 8px; margin-bottom: 8px; }
+.file-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #252830; border-radius: 8px; margin-bottom: 8px; border: 2px solid transparent; transition: .15s; }
+.file-item.selected { border-color: #6c5ce7; background: rgba(108,92,231,.1); }
 .file-item .name { flex: 1; font-size: 14px; }
 .file-item .info { font-size: 12px; color: #888; }
 .file-item .remove { color: #e74c3c; cursor: pointer; padding: 4px 8px; border: none; background: none; font-size: 18px; }
@@ -40,7 +41,53 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .status { padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 14px; display: none; }
 .status.error { display: block; background: rgba(231,76,60,.15); color: #e74c3c; }
 .status.success { display: block; background: rgba(46,204,113,.15); color: #2ecc71; }
+.status.info { display: block; background: rgba(108,92,231,.15); color: #b0a7f0; }
 .status a { color: #6c5ce7; }
+
+/* ---- 微信引导遮罩 ---- */
+.guide-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 999; display: none; align-items: center; justify-content: center; padding: 24px; }
+.guide-overlay.show { display: flex; }
+.guide-card { background: #252830; border-radius: 12px; padding: 24px; max-width: 360px; width: 100%; text-align: center; }
+.guide-card h3 { color: #6c5ce7; font-size: 18px; margin-bottom: 12px; }
+.guide-card p { font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 10px; }
+.guide-card .steps { text-align: left; background: #1a1d23; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #aaa; margin-bottom: 16px; }
+.guide-card .steps b { color: #e0e0e0; }
+.guide-card .btn { width: 100%; }
+.guide-card .tip { font-size: 12px; color: #666; margin-top: 10px; }
+
+/* ---- 预览面板 ---- */
+.preview-panel { background: #252830; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: none; }
+.preview-panel.show { display: block; }
+.preview-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.preview-header .title { flex: 1; font-size: 14px; font-weight: 600; color: #6c5ce7; }
+.preview-header .close { color: #888; cursor: pointer; background: none; border: none; font-size: 20px; padding: 2px 6px; }
+.preview-media { width: 100%; border-radius: 8px; background: #000; display: block; max-height: 360px; }
+.preview-audio { display: none; padding: 32px 16px; text-align: center; background: #1a1d23; border-radius: 8px; }
+.preview-audio .audio-icon { font-size: 64px; display: block; margin-bottom: 8px; }
+.preview-audio .audio-name { font-size: 13px; color: #aaa; word-break: break-all; }
+.preview-controls { margin-top: 12px; }
+.preview-seek { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.preview-seek span { font-size: 11px; font-family: monospace; color: #aaa; min-width: 42px; }
+.preview-seek span.time-cur { text-align: right; }
+.preview-seek input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 6px; background: #444; border-radius: 3px; outline: none; }
+.preview-seek input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #6c5ce7; cursor: pointer; }
+.preview-btns { display: flex; justify-content: center; align-items: center; gap: 12px; }
+.preview-btns button { background: #333; border: none; color: #e0e0e0; width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s; }
+.preview-btns button:hover { background: #444; }
+.preview-btns .btn-play { background: #6c5ce7; color: #fff; width: 48px; height: 48px; font-size: 22px; }
+.preview-btns .btn-play:hover { background: #5a4bd1; }
+.trim-btns { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.trim-btns button { background: #333; border: 1px solid #555; color: #ccc; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: .15s; }
+.trim-btns button:hover { background: #444; border-color: #6c5ce7; color: #fff; }
+
+@media (max-width: 600px) {
+  .preview-panel { padding: 12px; }
+  .preview-media { max-height: 220px; }
+  .preview-btns button { width: 36px; height: 36px; font-size: 16px; }
+  .preview-btns .btn-play { width: 44px; height: 44px; font-size: 20px; }
+  .preview-audio { padding: 24px 12px; }
+  .preview-audio .audio-icon { font-size: 48px; }
+}
 
 /* ---- 响应式：手机端适配 ---- */
 @media (max-width: 600px) {
@@ -63,6 +110,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   .btn-primary { padding: 14px; font-size: 16px; }
   .status { font-size: 13px; }
 }
+
+/* ---- 底部备案信息 ---- */
+.footer { text-align: center; padding: 24px 12px; border-top: 1px solid #333; }
+.footer a { color: #888; font-size: 12px; text-decoration: none; }
+.footer a:hover { color: #6c5ce7; }
 </style>
 </head>
 <body>
@@ -86,6 +138,37 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <!-- 文件列表 -->
   <div class="file-list" id="fileList"></div>
+
+  <!-- 预览面板 -->
+  <div class="preview-panel" id="previewPanel">
+    <div class="preview-header">
+      <span>👁</span>
+      <span class="title" id="previewTitle">预览</span>
+      <button class="close" onclick="closePreview()">✕</button>
+    </div>
+    <video class="preview-media" id="previewVideo" controlsList="nodownload" style="display:none"></video>
+    <div class="preview-audio" id="previewAudioBox">
+      <span class="audio-icon" id="previewAudioIcon">🎵</span>
+      <span class="audio-name" id="previewAudioName"></span>
+    </div>
+    <audio id="previewAudio" style="display:none"></audio>
+    <div class="preview-controls">
+      <div class="preview-seek">
+        <span class="time-cur" id="timeCur">00:00</span>
+        <input type="range" id="seekBar" min="0" max="1000" value="0" step="1">
+        <span id="timeTotal">00:00</span>
+      </div>
+      <div class="preview-btns">
+        <button onclick="seekPreview(-5)" title="后退5秒">⏪</button>
+        <button class="btn-play" id="btnPlay" onclick="togglePlay()">▶</button>
+        <button onclick="seekPreview(5)" title="快进5秒">⏩</button>
+      </div>
+      <div class="trim-btns">
+        <button onclick="setTrimTime('start')">📥 设为开始</button>
+        <button onclick="setTrimTime('end')">📤 设为结束</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 时间裁剪 -->
   <div class="trim-section" id="trimSection" style="display:none">
@@ -112,13 +195,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <span class="format-chip" data-fmt="ogg">OGG</span>
   </div>
 
-  <!-- 质量 -->
-  <h3 style="font-size:16px;margin-bottom:12px;color:#6c5ce7;">🎚 画质</h3>
-  <div class="format-select" id="qualitySelect">
-    <span class="format-chip selected" data-q="original">原画</span>
-    <span class="format-chip" data-q="high">高清 (1080p)</span>
-    <span class="format-chip" data-q="standard">标清 (720p)</span>
-    <span class="format-chip" data-q="small">小文件 (480p)</span>
+  <!-- 画质（默认隐藏，仅当导入多个不同分辨率的视频时显示） -->
+  <div id="qualitySection" style="display:none">
+    <h3 style="font-size:16px;margin-bottom:12px;color:#6c5ce7;">🎚 画质</h3>
+    <div class="format-select" id="qualitySelect"></div>
   </div>
 
   <!-- 导出按钮 -->
@@ -130,19 +210,39 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="progress-text" id="progressText"></div>
   </div>
 
+
   <!-- 状态 -->
   <div class="status" id="status"></div>
 </div>
 
+<!-- 微信引导遮罩 -->
+<div class="guide-overlay" id="guideOverlay">
+  <div class="guide-card">
+    <h3>📲 请用浏览器打开保存</h3>
+    <p>微信内置浏览器无法直接保存文件，请按下面步骤操作：</p>
+    <div class="steps">
+      1. 点击右上角 <b>···</b><br>
+      2. 选择 <b>在浏览器中打开</b><br>
+      3. 在浏览器中重新点击「开始导出」即可保存
+    </div>
+    <button class="btn btn-primary" onclick="closeGuide()">我知道了</button>
+    <div class="tip">文件已处理完成，但微信中不会下载。</div>
+  </div>
+</div>
+
 <script type="module">
-import { FFmpeg } from 'https://registry.npmmirror.com/@ffmpeg/ffmpeg/0.12.10/files/dist/esm/index.min.js';
-import { toBlobURL } from 'https://registry.npmmirror.com/@ffmpeg/util/0.12.1/files/dist/esm/index.min.js';
+import { FFmpeg } from './ffmpeg/ffmpeg/index.js';
+import { toBlobURL } from './ffmpeg/util/index.js';
 
 // ---- State ----
 let files = [];
 let ffmpeg = null;
 let selectedFormat = 'mp4';
-let selectedQuality = 'original';
+let selectedQuality = undefined; // undefined=未选择, null=原画(不缩放), number=统一目标高度
+let selectedFileIndex = -1;
+let mediaUrl = null;
+let mediaType = ''; // 'video' | 'audio'
+const fileResolutions = new Map(); // File -> {w, h}
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
 // ---- DOM ----
@@ -157,10 +257,24 @@ const progressWrap = document.getElementById('progressWrap');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const statusEl = document.getElementById('status');
+const previewPanel = document.getElementById('previewPanel');
+const previewTitle = document.getElementById('previewTitle');
+const previewVideo = document.getElementById('previewVideo');
+const previewAudio = document.getElementById('previewAudio');
+const previewAudioBox = document.getElementById('previewAudioBox');
+const previewAudioIcon = document.getElementById('previewAudioIcon');
+const previewAudioName = document.getElementById('previewAudioName');
+const seekBar = document.getElementById('seekBar');
+const timeCur = document.getElementById('timeCur');
+const timeTotal = document.getElementById('timeTotal');
+const btnPlay = document.getElementById('btnPlay');
+let seekDragging = false;
 
 // ---- Init FFmpeg ----
 async function initFFmpeg() {
   ffmpeg = new FFmpeg();
+
+  showStatus('info', '正在加载 FFmpeg 核心（约 32MB），请耐心等待...');
 
   ffmpeg.on('progress', ({ progress, time }) => {
     const pct = Math.round(progress * 100);
@@ -172,11 +286,19 @@ async function initFFmpeg() {
     // console.log(message);
   });
 
-  const baseURL = 'https://registry.npmmirror.com/@ffmpeg/core/0.12.6/files/dist/esm';
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
+  const baseURL = './ffmpeg/core';
+  let coreURL, wasmURL;
+  try {
+    coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+  } catch (e) {
+    throw new Error(`核心脚本下载失败: ${e.message || e}`);
+  }
+  try {
+    wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+  } catch (e) {
+    throw new Error(`核心引擎(约32MB)下载失败: ${e.message || e}。手机内存不足或网络中断时常见。`);
+  }
+  await ffmpeg.load({ coreURL, wasmURL });
 
   exportBtn.disabled = false;
   exportBtn.textContent = '开始导出';
@@ -184,8 +306,9 @@ async function initFFmpeg() {
 }
 
 initFFmpeg().catch(e => {
+  console.error('FFmpeg 加载失败:', e);
   exportBtn.textContent = 'FFmpeg 加载失败';
-  showStatus('error', 'FFmpeg.wasm 加载失败，请刷新页面重试。<br>如持续失败，可能是 CDN 被墙，需更换镜像。');
+  showStatus('error', `FFmpeg 加载失败：${e.message || e}。请刷新页面重试。`);
 });
 
 // ---- Upload ----
@@ -209,8 +332,21 @@ function handleFiles(fileList) {
       continue;
     }
     files.push(f);
+    if (f.type.startsWith('video')) {
+      probeVideoResolution(f).then(r => {
+        fileResolutions.set(f, r);
+        updateQualitySection();
+      });
+    }
+  }
+  if (files.length > 0) {
+    selectedFileIndex = files.length - 1;
   }
   renderFiles();
+  if (selectedFileIndex >= 0) {
+    previewFile(selectedFileIndex);
+  }
+  updateQualitySection();
 }
 
 function renderFiles() {
@@ -218,27 +354,195 @@ function renderFiles() {
     fileList.innerHTML = '';
     trimSection.style.display = 'none';
     exportBtn.disabled = ffmpeg ? false : true;
+    closePreview();
     return;
   }
   trimSection.style.display = 'block';
   exportBtn.disabled = ffmpeg ? false : true;
 
   fileList.innerHTML = files.map((f, i) => `
-    <div class="file-item">
+    <div class="file-item${i === selectedFileIndex ? ' selected' : ''}" onclick="selectFile(${i})" style="cursor:pointer;">
       <span>${f.type.startsWith('video') ? '🎬' : '🎵'}</span>
       <span class="name">${f.name}</span>
       <span class="info">${formatSize(f.size)}</span>
-      <button class="remove" onclick="removeFile(${i})">✕</button>
+      <button class="remove" onclick="event.stopPropagation();removeFile(${i})">✕</button>
     </div>
   `).join('');
 
-  // 更新结束时间为第一个文件时长（如果有的话）
   if (trimEnd.value === '') {
     trimEnd.value = '00:00:00.000';
   }
 }
 
-function removeFile(i) { files.splice(i, 1); renderFiles(); }
+function removeFile(i) {
+  const f = files[i];
+  if (f) fileResolutions.delete(f);
+  if (selectedFileIndex === i) { closePreview(); }
+  else if (selectedFileIndex > i) { selectedFileIndex--; }
+  files.splice(i, 1);
+  renderFiles();
+  updateQualitySection();
+}
+
+// ---- Preview ----
+function formatTime(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return '00:00.000';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor(seconds * 1000 % 1000);
+  return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + '.' + String(ms).padStart(3,'0');
+}
+
+function formatTimeHMS(seconds) {
+  if (!isFinite(seconds) || seconds < 0) return '00:00:00.000';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const ms = Math.floor(seconds * 1000 % 1000);
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + '.' + String(ms).padStart(3,'0');
+}
+
+function getActiveMedia() {
+  return mediaType === 'video' ? previewVideo : previewAudio;
+}
+
+function selectFile(index) {
+  if (selectedFileIndex === index) { closePreview(); return; }
+  selectedFileIndex = index;
+  previewFile(index);
+  renderFiles();
+}
+
+function previewFile(index) {
+  const f = files[index];
+  if (!f) return;
+  mediaType = f.type.startsWith('video') ? 'video' : 'audio';
+  previewPanel.classList.add('show');
+  previewTitle.textContent = '预览: ' + f.name;
+
+  // 释放旧资源
+  if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+  mediaUrl = URL.createObjectURL(f);
+
+  // 重置
+  previewVideo.style.display = 'none';
+  previewVideo.pause();
+  previewAudio.pause();
+  previewAudioBox.style.display = 'none';
+
+  if (mediaType === 'video') {
+    previewVideo.style.display = 'block';
+    previewVideo.src = mediaUrl;
+    previewVideo.load();
+  } else {
+    previewAudioBox.style.display = 'block';
+    previewAudioIcon.textContent = '🎵';
+    previewAudioName.textContent = f.name;
+    previewAudio.src = mediaUrl;
+    previewAudio.load();
+  }
+
+  seekBar.value = 0;
+  timeCur.textContent = '00:00';
+  timeTotal.textContent = '00:00';
+  btnPlay.textContent = '▶';
+}
+
+function closePreview() {
+  const media = getActiveMedia();
+  if (media) media.pause();
+  previewPanel.classList.remove('show');
+  if (mediaUrl) { URL.revokeObjectURL(mediaUrl); mediaUrl = null; }
+  mediaType = '';
+  selectedFileIndex = -1;
+  renderFiles();
+}
+
+function togglePlay() {
+  const media = getActiveMedia();
+  if (!media || !media.src || media.src === window.location.href) return;
+  if (media.paused) {
+    media.play().catch(() => {});
+  } else {
+    media.pause();
+  }
+}
+
+function seekPreview(secs) {
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  media.currentTime = Math.max(0, Math.min(media.duration, media.currentTime + secs));
+}
+
+function setTrimTime(target) {
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  const ts = formatTimeHMS(media.currentTime);
+  if (target === 'start') {
+    trimStart.value = ts;
+    showStatus('success', `开始时间已设为 ${ts}`);
+  } else {
+    trimEnd.value = ts;
+    showStatus('success', `结束时间已设为 ${ts}`);
+  }
+}
+
+// 进度条拖动
+seekBar.addEventListener('input', () => {
+  seekDragging = true;
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  timeCur.textContent = formatTime((seekBar.value / 1000) * media.duration);
+});
+seekBar.addEventListener('change', () => {
+  const media = getActiveMedia();
+  if (!media || !isFinite(media.duration)) return;
+  media.currentTime = (seekBar.value / 1000) * media.duration;
+  seekDragging = false;
+});
+
+// 视频元数据加载完成
+previewVideo.addEventListener('loadedmetadata', () => {
+  timeTotal.textContent = formatTime(previewVideo.duration);
+  seekBar.value = 0;
+  timeCur.textContent = '00:00';
+});
+previewVideo.addEventListener('timeupdate', () => {
+  if (!seekDragging && previewVideo.duration) {
+    seekBar.value = Math.round((previewVideo.currentTime / previewVideo.duration) * 1000);
+    timeCur.textContent = formatTime(previewVideo.currentTime);
+  }
+  if (previewVideo.paused && btnPlay.textContent !== '▶') { btnPlay.textContent = '▶'; }
+  else if (!previewVideo.paused && btnPlay.textContent !== '⏸') { btnPlay.textContent = '⏸'; }
+});
+previewVideo.addEventListener('play', () => { btnPlay.textContent = '⏸'; });
+previewVideo.addEventListener('pause', () => { btnPlay.textContent = '▶'; });
+previewVideo.addEventListener('ended', () => { btnPlay.textContent = '▶'; });
+
+// 音频元数据
+previewAudio.addEventListener('loadedmetadata', () => {
+  timeTotal.textContent = formatTime(previewAudio.duration);
+  seekBar.value = 0;
+  timeCur.textContent = '00:00';
+});
+previewAudio.addEventListener('timeupdate', () => {
+  if (!seekDragging && previewAudio.duration) {
+    seekBar.value = Math.round((previewAudio.currentTime / previewAudio.duration) * 1000);
+    timeCur.textContent = formatTime(previewAudio.currentTime);
+  }
+});
+previewAudio.addEventListener('play', () => {
+  btnPlay.textContent = '⏸';
+  previewAudioIcon.textContent = '🔊';
+});
+previewAudio.addEventListener('pause', () => {
+  btnPlay.textContent = '▶';
+  previewAudioIcon.textContent = '🎵';
+});
+previewAudio.addEventListener('ended', () => {
+  btnPlay.textContent = '▶';
+  previewAudioIcon.textContent = '🎵';
+});
 function formatSize(bytes) {
   if (bytes < 1024*1024) return (bytes/1024).toFixed(0)+'KB';
   if (bytes < 1024*1024*1024) return (bytes/(1024*1024)).toFixed(1)+'MB';
@@ -281,14 +585,124 @@ document.getElementById('formatSelect').addEventListener('click', e => {
   selectedFormat = e.target.dataset.fmt;
 });
 document.getElementById('qualitySelect').addEventListener('click', e => {
-  if (!e.target.dataset.q) return;
+  const q = e.target.dataset.q;
+  if (!q) return;
   document.querySelectorAll('#qualitySelect .format-chip').forEach(c => c.classList.remove('selected'));
   e.target.classList.add('selected');
-  selectedQuality = e.target.dataset.q;
+  selectedQuality = q === 'original' ? null : Number(q);
 });
+
+// 探测单个视频文件的分辨率（宽高）。无法解码时返回 null。
+function probeVideoResolution(file) {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('video')) { resolve(null); return; }
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    v.playsInline = true;
+    let settled = false;
+    const finish = (r) => {
+      if (settled) return;
+      settled = true;
+      v.removeAttribute('src');
+      v.load();
+      URL.revokeObjectURL(url);
+      resolve(r);
+    };
+    v.onloadedmetadata = () => finish(v.videoWidth && v.videoHeight ? { w: v.videoWidth, h: v.videoHeight } : null);
+    v.onerror = () => finish(null);
+    v.src = url;
+    setTimeout(() => finish(null), 8000);
+  });
+}
+
+// 画质栏：仅当导入「多个不同分辨率的视频」时才显示，默认选中最高分辨率，
+// 并提供「原画」选项（各素材保持自身分辨率/比例导出）。
+// 其余情况（单个视频 / 多个同分辨率视频 / 音频）隐藏，按素材自身规格导出。
+function updateQualitySection() {
+  const qSection = document.getElementById('qualitySection');
+  const qSelect = document.getElementById('qualitySelect');
+
+  const heights = [];
+  for (const f of files) {
+    if (f.type.startsWith('video')) {
+      const r = fileResolutions.get(f);
+      if (r && r.h > 0) heights.push(r.h);
+    }
+  }
+  const distinct = [...new Set(heights)].sort((a, b) => b - a);
+
+  if (distinct.length < 2) {
+    qSection.style.display = 'none';
+    selectedQuality = undefined;
+    return;
+  }
+
+  // 未选择 / 已选高度失效 → 默认最高分辨率；用户显式选择「原画」(null) 时保留
+  if (selectedQuality === undefined || (typeof selectedQuality === 'number' && !distinct.includes(selectedQuality))) {
+    selectedQuality = distinct[0];
+  }
+
+  qSelect.innerHTML = [
+    `<span class="format-chip${selectedQuality === null ? ' selected' : ''}" data-q="original">原画</span>`,
+    ...distinct.map(h => `<span class="format-chip${h === selectedQuality ? ' selected' : ''}" data-q="${h}">${h}p</span>`)
+  ].join('');
+  qSection.style.display = 'block';
+}
 
 // ---- Export ----
 exportBtn.addEventListener('click', doExport);
+
+// 计算拼接统一画布：默认取分辨率最高的视频；用户选了具体高度则按最高视频宽高比推导宽度
+function computeMergeCanvas() {
+  let best = { w: 1280, h: 720 };
+  for (const f of files) {
+    if (!f.type.startsWith('video')) continue;
+    const r = fileResolutions.get(f);
+    if (r && r.w * r.h > best.w * best.h) best = r;
+  }
+  let w, h;
+  if (typeof selectedQuality === 'number') {
+    h = selectedQuality;
+    w = Math.round(h * (best.w / best.h));
+  } else {
+    w = best.w; h = best.h;
+  }
+  if (w % 2 !== 0) w += 1;
+  if (h % 2 !== 0) h += 1;
+  return { w, h };
+}
+
+// 视频拼接：逐段统一分辨率/比例/帧率/像素格式后 concat
+function buildVideoConcat(ffargs) {
+  const { w, h } = computeMergeCanvas();
+  const n = files.length;
+  const parts = [];
+  const inputs = [];
+  for (let i = 0; i < n; i++) {
+    parts.push(`[${i}:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[v${i}]`);
+    parts.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a${i}]`);
+    inputs.push(`[v${i}]`, `[a${i}]`);
+  }
+  parts.push(`${inputs.join('')}concat=n=${n}:v=1:a=1[v][a]`);
+  ffargs.push('-filter_complex', parts.join(';'));
+  ffargs.push('-map', '[v]', '-map', '[a]');
+}
+
+// 音频拼接：统一采样率/声道/采样格式后 concat
+function buildAudioConcat(ffargs) {
+  const n = files.length;
+  const parts = [];
+  const labels = [];
+  for (let i = 0; i < n; i++) {
+    parts.push(`[${i}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a${i}]`);
+    labels.push(`[a${i}]`);
+  }
+  parts.push(`${labels.join('')}concat=n=${n}:v=0:a=1[a]`);
+  ffargs.push('-filter_complex', parts.join(';'));
+  ffargs.push('-map', '[a]');
+}
 
 async function doExport() {
   if (!ffmpeg || files.length === 0) return;
@@ -322,12 +736,7 @@ async function doExport() {
     const outExt = selectedFormat;
     const outputName = `output.${outExt}`;
     const ffargs = [];
-
-    // 视频缩放（根据画质）
-    const qHeights = { original: null, high: 1080, standard: 720, small: 480 };
-    if (selectedQuality !== 'original' && qHeights[selectedQuality] && selectedFormat !== 'mp3' && selectedFormat !== 'aac' && selectedFormat !== 'm4a' && selectedFormat !== 'wav' && selectedFormat !== 'flac' && selectedFormat !== 'ogg') {
-      ffargs.push('-vf', `scale=-2:${qHeights[selectedQuality]}`);
-    }
+    const isAudioOut = ['mp3','aac','m4a','wav','flac','ogg'].includes(selectedFormat);
 
     // 输入文件
     for (const name of inputNames) {
@@ -337,8 +746,26 @@ async function doExport() {
       ffargs.push('-i', name);
     }
 
+    // 多文件：拼接合并；单文件：可选缩放（画质栏隐藏时通常为原画）
+    if (inputNames.length > 1) {
+      const videoCount = files.filter(f => f.type.startsWith('video')).length;
+      const audioCount = files.length - videoCount;
+      if (videoCount === 0) {
+        buildAudioConcat(ffargs);
+      } else if (audioCount === 0 && !isAudioOut) {
+        buildVideoConcat(ffargs);
+      } else if (audioCount === 0 && isAudioOut) {
+        buildAudioConcat(ffargs);
+      } else if (isAudioOut) {
+        buildAudioConcat(ffargs);
+      } else {
+        throw new Error('音视频混合拼接暂不支持，请分别导出');
+      }
+    } else if (typeof selectedQuality === 'number' && !isAudioOut) {
+      ffargs.push('-vf', `scale=-2:${selectedQuality}`);
+    }
+
     // 编解码参数
-    const isAudio = ['mp3','aac','m4a','wav','flac','ogg'].includes(selectedFormat);
     if (selectedFormat === 'mp3') {
       ffargs.push('-c:a', 'libmp3lame', '-b:a', '192k');
     } else if (selectedFormat === 'aac' || selectedFormat === 'm4a') {
@@ -364,13 +791,9 @@ async function doExport() {
     const blob = new Blob([data.buffer], { type: getMime(selectedFormat) });
 
     // 下载
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
     let prefix = files[0].name.replace(/\.[^.]+$/, '');
-    a.download = `${prefix}_output.${outExt}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `${prefix}_output.${outExt}`;
+    const saved = await triggerDownload(blob, fileName);
 
     // 清理
     for (const name of inputNames) {
@@ -379,7 +802,7 @@ async function doExport() {
     try { await ffmpeg.deleteFile(outputName); } catch (_) {}
 
     progressText.textContent = '完成！';
-    showStatus('success', `导出成功！文件已开始下载。`);
+    showStatus('success', saved ? '导出成功！文件已开始保存。' : '导出完成！请按弹窗提示保存文件。');
     exportBtn.disabled = false;
     exportBtn.textContent = '开始导出';
   } catch (e) {
@@ -389,6 +812,54 @@ async function doExport() {
     exportBtn.disabled = false;
     exportBtn.textContent = '重试导出';
   }
+}
+
+function isWeChat() {
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+
+function showOpenInBrowserGuide() {
+  document.getElementById('guideOverlay').classList.add('show');
+}
+
+function closeGuide() {
+  document.getElementById('guideOverlay').classList.remove('show');
+}
+
+async function triggerDownload(blob, fileName) {
+  // 1) Web Share API：iOS Safari / 部分安卓浏览器可直接调起“保存到文件 / 分享”
+  if (navigator.share && navigator.canShare) {
+    const file = new File([blob], fileName, { type: blob.type });
+    try {
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'DavidsMagic 导出' });
+        return true;
+      }
+    } catch (err) {
+      // 用户取消分享
+      if (err && err.name === 'AbortError') return false;
+      // 其它错误继续尝试下载
+    }
+  }
+
+  // 2) 微信内置浏览器：不支持下载/保存文件，引导用户在系统浏览器打开
+  if (isWeChat()) {
+    showOpenInBrowserGuide();
+    return false;
+  }
+
+  // 3) 桌面 / 普通移动浏览器：传统 <a download>
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // 延迟释放，避免过早 revoke 导致下载被中断
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return true;
 }
 
 function getMime(fmt) {
@@ -409,6 +880,16 @@ function showStatus(type, msg) {
 // Global functions for onclick handlers
 window.removeFile = removeFile;
 window.resetTrim = resetTrim;
+window.selectFile = selectFile;
+window.closePreview = closePreview;
+window.togglePlay = togglePlay;
+window.seekPreview = seekPreview;
+window.setTrimTime = setTrimTime;
+window.closeGuide = closeGuide;
 </script>
+
+<footer class="footer">
+  <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">苏ICP备2021016894号</a>
+</footer>
 </body>
 </html>
