@@ -287,10 +287,18 @@ async function initFFmpeg() {
   });
 
   const baseURL = './ffmpeg/core';
-  await ffmpeg.load({
-    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-  });
+  let coreURL, wasmURL;
+  try {
+    coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
+  } catch (e) {
+    throw new Error(`核心脚本下载失败: ${e.message || e}`);
+  }
+  try {
+    wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
+  } catch (e) {
+    throw new Error(`核心引擎(约32MB)下载失败: ${e.message || e}。手机内存不足或网络中断时常见。`);
+  }
+  await ffmpeg.load({ coreURL, wasmURL });
 
   exportBtn.disabled = false;
   exportBtn.textContent = '开始导出';
